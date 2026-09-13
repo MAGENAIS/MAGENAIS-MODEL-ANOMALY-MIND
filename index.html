@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AnomalyMind — lightweight, explainable anomaly detection</title>
+<meta name="description" content="AnomalyMind flags outliers in tabular/time-series data using MAD, robust Z-score, IQR, and rolling statistics, then reports an Anomaly Context Stability score for how well each flag holds up. Zero dependencies, runs locally." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+--paper: #E9EDEC;
+--paper-raised: #F3F5F4;
+--ink: #171D1C;
+--ink-soft: #454F4D;
+--rule: #C7CFCD;
+--accent: #1F6F78;
+--accent-ink: #0F3E43;
+--status-dev: #A9784F;
+--serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+--mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body {
+margin: 0;
+background: var(--paper);
+color: var(--ink);
+font-family: var(--serif);
+font-size: 17px;
+line-height: 1.55;
+-webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+header.hero { padding: 56px 0 36px; border-bottom: 1px solid var(--rule); }
+.kicker { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); margin: 0 0 18px; }
+.kicker a { color: var(--ink-soft); }
+.id-line { font-family: var(--mono); font-size: 0.85rem; color: var(--ink-soft); margin: 0 0 6px; }
+h1 { font-size: clamp(2rem, 4.2vw, 2.7rem); line-height: 1.15; margin: 0 0 16px; font-weight: 600; max-width: 16ch; }
+.lede { font-size: 1.15rem; color: var(--ink-soft); max-width: 58ch; margin: 0 0 24px; }
+dl.badges { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; font-family: var(--mono); font-size: 0.88rem; }
+dl.badges div { display: flex; gap: 6px; color: var(--ink-soft); }
+dl.badges dt::after { content: ":"; }
+dl.badges dd { margin: 0; color: var(--ink); }
+main { padding: 44px 0 96px; }
+section + section { margin-top: 48px; }
+h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 6px; }
+.section-note { color: var(--ink-soft); font-size: 0.98rem; max-width: 62ch; margin: 0 0 22px; }
+p.body-text { max-width: 66ch; margin: 0 0 14px; }
+.disclaimer {
+border-left: 3px solid var(--status-dev);
+background: var(--paper-raised);
+padding: 12px 18px;
+font-size: 0.95rem;
+color: var(--ink-soft);
+max-width: 62ch;
+}
+pre.example {
+background: var(--ink);
+color: #DCE7E5;
+font-family: var(--mono);
+font-size: 0.85rem;
+padding: 20px 22px;
+border-radius: 4px;
+overflow-x: auto;
+line-height: 1.6;
+}
+pre.example .muted { color: #8FA19D; }
+pre.example .accent { color: #7FD4CE; }
+table.ranking { border-collapse: collapse; width: 100%; margin: 18px 0 8px; font-size: 0.95rem; }
+table.ranking th, table.ranking td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule); }
+table.ranking th { font-family: var(--mono); font-weight: 500; color: var(--ink-soft); font-size: 0.8rem; }
+table.ranking td.num { font-family: var(--mono); }
+ul.plain { padding-left: 1.1em; margin: 0 0 0; max-width: 62ch; }
+ul.plain li { margin-bottom: 6px; }
+.resources { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px 32px; padding: 0; margin: 0; list-style: none; }
+.resources li { border-top: 1px solid var(--rule); padding-top: 14px; }
+.resources a { font-weight: 600; display: block; margin-bottom: 4px; }
+.resources span { color: var(--ink-soft); font-size: 0.92rem; }
+footer { border-top: 1px solid var(--rule); padding: 28px 0 56px; color: var(--ink-soft); font-size: 0.9rem; }
+footer a { color: var(--ink-soft); }
+@media (max-width: 520px) {
+header.hero { padding-top: 40px; }
+body { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+<header class="hero">
+<div class="wrap">
+<p class="kicker"><a href="https://github.com/MAGENAIS">MAGENAIS</a> / <a href="https://magenais.github.io/MAGENAIS-MODELS/">Models</a> / AnomalyMind</p>
+<p class="id-line">magenais.anomaly-mind · v1.0.0</p>
+<h1>Lightweight, explainable anomaly detection.</h1>
+<p class="lede">Flags outliers in tabular or time-series data using simple, well-understood statistics — no neural network — then reports an Anomaly Context Stability score for whether each flag holds up under different thresholds, windows, methods, and row subsets, or only under one specific setting.</p>
+<dl class="badges">
+<div><dt>License</dt><dd>Apache-2.0</dd></div>
+<div><dt>Type</dt><dd>algorithm</dd></div>
+<div><dt>Trust</dt><dd>experimental</dd></div>
+<div><dt>Dependencies</dt><dd>zero</dd></div>
+</dl>
+</div>
+</header>
+<main>
+<div class="wrap">
+<section id="about">
+<h2>What it does</h2>
+<p class="body-text">Given a table of records, AnomalyMind infers which columns are numeric, scores every present value using one of four methods — median absolute deviation (MAD), robust (modified) Z-score, interquartile range (IQR), or rolling local-neighborhood statistics — and flags a value anomalous when its deviation exceeds the method's threshold.</p>
+<p class="body-text">For every flag, it computes an Anomaly Context Stability (ACS) score: the proportion of tested configurations — varying threshold, window, method, and a resampled row subset — under which the same observation stays flagged. It is a research-oriented model: MAD/Z-score/IQR/rolling are well-established statistics; ACS is this model's own framing of configuration-resampling stability on top of them, not a claim of a new detection algorithm. See <a href="./docs/algorithm.md">docs/algorithm.md</a> for the full method.</p>
+</section>
+<section id="example">
+<h2>Worked example</h2>
+<p class="section-note">Output of <a href="./examples/basic-usage.mjs">examples/basic-usage.mjs</a> — 30 sensor readings oscillating gently around 100, with two injected extreme anomalies, run with a fixed seed — reproducible byte-for-byte.</p>
+<table class="ranking">
+<thead><tr><th>Row</th><th>Variable</th><th>Value</th><th>Method</th><th>Score</th><th>ACS</th><th>Stability</th></tr></thead>
+<tbody>
+<tr><td>20</td><td>sensor</td><td class="num">-50</td><td>mad</td><td class="num">-132.00</td><td class="num">1.00</td><td>stable</td></tr>
+<tr><td>10</td><td>sensor</td><td class="num">250</td><td>mad</td><td class="num">130.71</td><td class="num">1.00</td><td>stable</td></tr>
+</tbody>
+</table>
+<pre class="example"><span class="muted">Both injected values deviate by well over 100 median-absolute-deviations</span>
+<span class="muted">from the rest of the series, and stayed flagged in every evaluable</span>
+<span class="muted">configuration tested (threshold, window, method, and row subset):</span>
+
+<span class="accent">Anomaly Context Stability (ACS): 1.00 — stable</span></pre>
+<p class="disclaimer">ACS is a sensitivity estimate under tested assumptions, not a guarantee.</p>
+</section>
+<section id="limitations">
+<h2>Limitations</h2>
+<ul class="plain">
+<li>Only univariate anomalies are modeled — no multivariate outlier detection (e.g. Mahalanobis distance) in v1.0.0.</li>
+<li>The rolling method's fixed-size window has fewer neighbors near the start/end of a series, which can make edge observations more sensitive to being flagged under that method alone.</li>
+<li>ACS's "normalization" variation cycles through this model's own four methods, not arbitrary data transforms.</li>
+</ul>
+</section>
+<section id="resources">
+<h2>Get started</h2>
+<ul class="resources">
+<li><a href="./README.md">README</a><span>Install, API, full example</span></li>
+<li><a href="./docs/algorithm.md">Algorithm</a><span>MAD, robust Z-score, IQR, rolling, and ACS explained in full</span></li>
+<li><a href="./tests/anomalyMind.test.ts">Tests</a><span>39 tests, node:test</span></li>
+<li><a href="./CHANGELOG.md">Changelog</a><span>Version history</span></li>
+<li><a href="https://github.com/MAGENAIS/MAGENAIS-MODEL-ANOMALY-MIND">Source on GitHub</a><span>Clone, fork, or open an issue</span></li>
+<li><a href="https://magenais.github.io/MAGENAIS-MODELS/">MAGENAIS Models catalog</a><span>Browse all models</span></li>
+</ul>
+</section>
+</div>
+</main>
+<footer>
+<div class="wrap">
+<p>Apache-2.0 licensed. Independent of MAGENAIS Core, which is separate and proprietary — this package runs without it and depends on nothing from it.</p>
+</div>
+</footer>
+</body>
+</html>
