@@ -1,0 +1,24 @@
+{
+  "id": "magenais.anomaly-mind",
+  "name": "AnomalyMind",
+  "version": "1.0.0",
+  "description": "Lightweight, local, explainable anomaly detection over numeric tabular/time-series/sensor data. Flags outliers using simple, well-understood statistical methods (median absolute deviation, robust Z-score, interquartile range, rolling local statistics — no neural network) and reports an Anomaly Context Stability (ACS) score distinguishing a threshold-sensitive anomaly from one that holds up across tested threshold/window/method/subset variations.",
+  "author": {
+    "name": "MAGENAIS",
+    "organization": "MAGENAIS"
+  },
+  "type": "algorithm",
+  "capabilities": ["anomaly-detection", "time-series-analysis"],
+  "runtimes": ["builtin-local"],
+  "license": {
+    "type": "Apache-2.0",
+    "url": "https://www.apache.org/licenses/LICENSE-2.0"
+  },
+  "pricing": {
+    "type": "free"
+  },
+  "trust": "experimental",
+  "uri": "magenais://anomaly-mind@1.0.0",
+  "repository": "https://github.com/MAGENAIS/MAGENAIS-MODEL-ANOMALY-MIND",
+  "documentation": "https://github.com/MAGENAIS/MAGENAIS-MODEL-ANOMALY-MIND#readme"
+}

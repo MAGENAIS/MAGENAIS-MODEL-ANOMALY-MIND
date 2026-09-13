@@ -1,0 +1,38 @@
+{
+  "name": "@magenais/anomaly-mind",
+  "version": "1.0.0",
+  "description": "Lightweight, local, explainable anomaly detection over numeric tabular/time-series data — MAD, robust Z-score, IQR, and rolling statistics, each reported with an Anomaly Context Stability (ACS) score. No neural network, zero runtime dependencies.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "example": "node --experimental-strip-types examples/basic-usage.mjs"
+  },
+  "keywords": [
+    "anomaly-detection",
+    "outlier-detection",
+    "time-series-analysis",
+    "data-analytics",
+    "explainable-ai",
+    "mad",
+    "iqr",
+    "magenais"
+  ],
+  "author": {
+    "name": "MAGENAIS"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MAGENAIS/MAGENAIS-MODEL-ANOMALY-MIND.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
