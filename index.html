@@ -7,95 +7,340 @@
 <meta name="description" content="AnomalyMind flags outliers in tabular/time-series data using MAD, robust Z-score, IQR, and rolling statistics, then reports an Anomaly Context Stability score for how well each flag holds up. Zero dependencies, runs locally." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+
 :root {
---paper: #E9EDEC;
---paper-raised: #F3F5F4;
---ink: #171D1C;
---ink-soft: #454F4D;
---rule: #C7CFCD;
---accent: #1F6F78;
---accent-ink: #0F3E43;
---status-dev: #A9784F;
---serif: "Source Serif 4", Georgia, "Times New Roman", serif;
---mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --navy: #0B1220;
+  --navy-2: #121B2E;
+  --navy-soft: #1B2842;
+  --paper: #FAFAF8;
+  --surface: #FFFFFF;
+  --surface-2: #F3F4F2;
+  --border: #E4E3DE;
+  --ink: #14181A;
+  --ink-soft: #5A6260;
+  --ink-faint: #8A928F;
+  --gold: #C9973F;
+  --gold-ink: #7A5A1E;
+  --teal: #1F6F78;
+  --ok: #1F6F78;
+  --dev: #A9784F;
+  --planned: #6B7674;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --head: "Space Grotesk", var(--sans);
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 12px;
+  --shadow-sm: 0 1px 2px rgba(15,20,20,.06), 0 1px 1px rgba(15,20,20,.04);
+  --shadow-md: 0 8px 24px rgba(15,20,20,.08), 0 2px 6px rgba(15,20,20,.05);
 }
 * { box-sizing: border-box; }
-html { color-scheme: light; }
+html { color-scheme: light; scroll-behavior: smooth; }
 body {
-margin: 0;
-background: var(--paper);
-color: var(--ink);
-font-family: var(--serif);
-font-size: 17px;
-line-height: 1.55;
--webkit-font-smoothing: antialiased;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
 }
-a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
-a:hover { color: var(--accent); }
-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
-header.hero { padding: 56px 0 36px; border-bottom: 1px solid var(--rule); }
-.kicker { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); margin: 0 0 18px; }
-.kicker a { color: var(--ink-soft); }
-.id-line { font-family: var(--mono); font-size: 0.85rem; color: var(--ink-soft); margin: 0 0 6px; }
-h1 { font-size: clamp(2rem, 4.2vw, 2.7rem); line-height: 1.15; margin: 0 0 16px; font-weight: 600; max-width: 16ch; }
-.lede { font-size: 1.15rem; color: var(--ink-soft); max-width: 58ch; margin: 0 0 24px; }
-dl.badges { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; font-family: var(--mono); font-size: 0.88rem; }
-dl.badges div { display: flex; gap: 6px; color: var(--ink-soft); }
+a { color: var(--gold-ink); text-decoration: none; }
+a:hover { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+.wrap { max-width: 900px; margin: 0 auto; padding: 0 28px; }
+h1, h2, h3 { font-family: var(--head); font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+
+/* ---- Top nav ---- */
+.topnav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(11,18,32,.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.navwrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+.brand { display: flex; align-items: baseline; gap: 8px; color: #F4F2EC; font-family: var(--head); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.01em; }
+.brand:hover { color: #F4F2EC; text-decoration: none; }
+.brand-mark { color: var(--gold); }
+.brand-sub { font-family: var(--mono); font-weight: 500; font-size: 0.7rem; color: #9AA5B5; letter-spacing: 0.08em; text-transform: uppercase; padding-left: 6px; border-left: 1px solid rgba(255,255,255,.18); }
+.navlinks { display: flex; gap: 26px; }
+.navlinks a { color: #C9CFDA; font-size: 0.92rem; font-weight: 500; margin-left: 26px; }
+.navlinks a:first-child { margin-left: 0; }
+.navlinks a:hover { color: #fff; text-decoration: none; }
+.navlinks a.is-active { color: var(--gold); }
+
+/* ---- Hero ---- */
+header.hero {
+  background:
+    radial-gradient(1100px 420px at 85% -10%, rgba(201,151,63,.20), transparent 60%),
+    linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%);
+  color: #F4F2EC;
+  padding: 64px 0 56px;
+}
+.breadcrumb { font-family: var(--mono); font-size: 12.5px; color: #9AA5B5; margin: 0 0 22px; letter-spacing: .01em; }
+.breadcrumb a { color: #9AA5B5; }
+.breadcrumb a:hover { color: var(--gold); }
+.breadcrumb span { margin: 0 6px; color: #4C5768; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 12.5px; color: #E7DCC4;
+  background: rgba(201,151,63,.12); border: 1px solid rgba(201,151,63,.35);
+  padding: 5px 12px; border-radius: 999px; margin: 0 0 20px;
+}
+header.hero h1 { font-size: clamp(1.35rem, 2.1vw, 1.6rem); font-weight: 500; line-height: 1.32; margin: 0 0 18px; color: #C6CCD6; max-width: 46ch; }
+header.hero h1 .accent { color: var(--gold); }
+.lede { font-size: 1.15rem; color: #C6CCD6; max-width: 60ch; margin: 0 0 30px; font-weight: 400; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 34px; }
+.hero-actions .btn { margin: 0 12px 12px 0; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 8px; font-weight: 600; font-size: 0.94rem; border: 1px solid transparent; transition: transform .12s ease, box-shadow .12s ease; }
+.btn:hover { text-decoration: none; }
+.btn-primary { background: var(--gold); color: #241905; }
+.btn-primary:hover { background: #D9A94F; color: #241905; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(201,151,63,.35); }
+.btn-ghost { background: transparent; color: #F4F2EC; border-color: rgba(255,255,255,.28); }
+.btn-ghost:hover { background: rgba(255,255,255,.08); color: #fff; transform: translateY(-1px); }
+dl.badges { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+dl.badges div { display: flex; gap: 6px; align-items: center; font-family: var(--mono); font-size: 12.5px; color: #C6CCD6; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); padding: 6px 12px; border-radius: 7px; margin: 0 10px 10px 0; }
+dl.badges dt { color: #8C96A6; }
 dl.badges dt::after { content: ":"; }
-dl.badges dd { margin: 0; color: var(--ink); }
-main { padding: 44px 0 96px; }
-section + section { margin-top: 48px; }
-h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 6px; }
-.section-note { color: var(--ink-soft); font-size: 0.98rem; max-width: 62ch; margin: 0 0 22px; }
-p.body-text { max-width: 66ch; margin: 0 0 14px; }
+dl.badges dd { margin: 0; color: #F0EDE4; font-weight: 500; }
+
+/* ---- Main / cards ---- */
+main { padding: 56px 0 30px; }
+section + section { margin-top: 34px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 36px;
+  box-shadow: var(--shadow-sm);
+}
+.section-eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); margin: 0 0 8px; font-weight: 600; }
+h2 { font-size: 1.35rem; margin: 0 0 14px; }
+.section-note { color: var(--ink-soft); font-size: 0.98rem; max-width: 62ch; margin: 0 0 20px; }
+p.body-text { max-width: 68ch; margin: 0 0 14px; color: var(--ink); }
+p.body-text:last-child { margin-bottom: 0; }
 .disclaimer {
-border-left: 3px solid var(--status-dev);
-background: var(--paper-raised);
-padding: 12px 18px;
-font-size: 0.95rem;
-color: var(--ink-soft);
-max-width: 62ch;
+  border-left: 3px solid var(--dev);
+  background: var(--surface-2);
+  padding: 12px 18px;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  border-radius: 0 8px 8px 0;
+  margin-top: 18px;
 }
-pre.example {
-background: var(--ink);
-color: #DCE7E5;
-font-family: var(--mono);
-font-size: 0.85rem;
-padding: 20px 22px;
-border-radius: 4px;
-overflow-x: auto;
-line-height: 1.6;
+.terminal {
+  background: var(--navy);
+  color: #DCE7E5;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 18px 0 0;
+  box-shadow: var(--shadow-md);
 }
-pre.example .muted { color: #8FA19D; }
-pre.example .accent { color: #7FD4CE; }
-table.ranking { border-collapse: collapse; width: 100%; margin: 18px 0 8px; font-size: 0.95rem; }
-table.ranking th, table.ranking td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule); }
-table.ranking th { font-family: var(--mono); font-weight: 500; color: var(--ink-soft); font-size: 0.8rem; }
+.terminal-bar { display: flex; gap: 6px; padding: 11px 14px; background: rgba(255,255,255,.04); border-bottom: 1px solid rgba(255,255,255,.08); }
+.terminal-dot { width: 10px; height: 10px; border-radius: 50%; background: #4C5768; }
+.terminal pre { margin: 0; padding: 20px 22px; overflow-x: auto; line-height: 1.65; }
+.terminal .muted { color: #7C8D89; }
+.terminal .accent { color: #E4C583; font-weight: 600; }
+table.ranking { border-collapse: collapse; width: 100%; margin: 4px 0 0; font-size: 0.92rem; }
+table.ranking th, table.ranking td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--border); }
+table.ranking th { font-family: var(--mono); font-weight: 600; color: var(--ink-soft); font-size: 0.74rem; text-transform: uppercase; letter-spacing: .05em; }
 table.ranking td.num { font-family: var(--mono); }
-ul.plain { padding-left: 1.1em; margin: 0 0 0; max-width: 62ch; }
-ul.plain li { margin-bottom: 6px; }
-.resources { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px 32px; padding: 0; margin: 0; list-style: none; }
-.resources li { border-top: 1px solid var(--rule); padding-top: 14px; }
-.resources a { font-weight: 600; display: block; margin-bottom: 4px; }
-.resources span { color: var(--ink-soft); font-size: 0.92rem; }
-footer { border-top: 1px solid var(--rule); padding: 28px 0 56px; color: var(--ink-soft); font-size: 0.9rem; }
-footer a { color: var(--ink-soft); }
-@media (max-width: 520px) {
-header.hero { padding-top: 40px; }
-body { font-size: 16px; }
+table.ranking tr:last-child td { border-bottom: none; }
+ul.plain { list-style: none; padding: 0; margin: 0; max-width: 66ch; display: flex; flex-direction: column; gap: 12px; }
+ul.plain li { position: relative; padding-left: 24px; color: var(--ink); }
+ul.plain li::before { content: "—"; position: absolute; left: 0; color: var(--gold-ink); font-weight: 700; }
+code { font-family: var(--mono); background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: 0.88em; }
+.resources { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding: 0; margin: 0; list-style: none; }
+.resources li { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease; }
+.resources li:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: #D9CBA3; }
+.resources a { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.98rem; }
+.resources span { color: var(--ink-soft); font-size: 0.88rem; }
+
+/* ---- Catalog-specific record cards ---- */
+ul.records { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.record {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 26px 30px; box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, border-color .15s ease;
 }
+.record:hover { box-shadow: var(--shadow-md); border-color: #D9CBA3; }
+.record-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+.record-id { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-faint); margin: 0 0 3px; }
+.record-name { font-size: 1.3rem; font-family: var(--head); font-weight: 600; margin: 0; }
+.status { font-family: var(--mono); font-size: 0.72rem; padding: 5px 11px; border-radius: 999px; white-space: nowrap; font-weight: 600; letter-spacing: .02em; }
+.status.live { color: #0E4B45; background: #DCEDE9; border: 1px solid #B7D9D1; }
+.status.dev { color: var(--dev); background: #F5EBDE; border: 1px solid #E3CDA9; }
+.status.planned { color: var(--planned); background: #EEEEEC; border: 1px solid #D8D8D5; }
+.record-desc { max-width: 66ch; color: var(--ink); margin: 0 0 14px; }
+dl.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 6px; font-size: 0.84rem; font-family: var(--mono); color: var(--ink-soft); }
+dl.meta div { display: flex; gap: 5px; margin-right: 22px; }
+dl.meta div:last-child { margin-right: 0; }
+dl.meta dt::after { content: ":"; }
+dl.meta dd { margin: 0; color: var(--ink); }
+.record-link { font-size: 0.92rem; font-weight: 600; margin: 10px 0 0; }
+.empty-note { font-size: 0.88rem; color: var(--ink-faint); font-style: italic; margin-top: 4px; }
+
+/* ---- Footer ---- */
+footer { background: var(--navy); color: #C6CCD6; margin-top: 72px; }
+.footer-top { padding: 52px 0 36px; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 32px; }
+.footer-brand-mark { font-family: var(--mono); font-weight: 700; font-size: 1.05rem; letter-spacing: .04em; margin: 0 0 10px; }
+.footer-brand-mark a { color: #F4F2EC; }
+.footer-brand-mark a:hover { color: #fff; text-decoration: none; }
+.footer-brand-mark .brand-mark { color: var(--gold); }
+.footer-blurb { font-size: 0.92rem; color: #9AA5B5; max-width: 34ch; margin: 0; }
+.footer-col h3 { font-family: var(--mono); font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: #7C879A; margin: 0 0 14px; font-weight: 600; }
+.footer-col a { display: block; color: #C6CCD6; font-size: 0.92rem; margin-bottom: 10px; }
+.footer-col a:hover { color: #fff; }
+.footer-bottom { border-top: 1px solid rgba(255,255,255,.1); padding: 22px 0 40px; font-size: 0.84rem; color: #7C879A; }
+.footer-bottom p { margin: 0; max-width: 74ch; }
+
+@media (max-width: 720px) {
+  .footer-top { grid-template-columns: 1fr; gap: 26px; }
+  .navlinks { gap: 16px; }
+  .card { padding: 24px 22px; }
+  header.hero { padding: 44px 0 40px; }
+  main { padding: 40px 0 20px; }
+}
+@media (max-width: 480px) {
+  .navlinks a:not(.always-show) { display: none; }
+}
+
+
+/* ============================================================
+   V2 — Header matched to the MAGENAIS app shell, bold model
+   name treatment, in-page document viewer, catalog grid.
+   ============================================================ */
+
+/* ---- Header: rebuilt to match the MAGENAIS app topbar ---- */
+.topnav {
+  background: #0B0C0C;
+  border-bottom: 1px solid rgba(255,255,255,.09);
+}
+.navwrap { display: flex; align-items: center; justify-content: space-between; height: auto; padding: 12px 0; }
+a.brand { display: flex; align-items: center; gap: 12px; }
+a.brand:hover { text-decoration: none; }
+.brand-logo { height: 36px; width: auto; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); flex-shrink: 0; }
+.brand-text { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+.brand-text .mark {
+  font-family: var(--mono); font-weight: 700; font-size: 16.5px; letter-spacing: .05em;
+  color: #FBFAF6;
+}
+.brand-text .mark .accent { color: var(--gold); }
+.brand-text .tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: #9AA5B5; padding-top: 1px;
+}
+@media (max-width: 480px) { .brand-text .tag { display: none; } }
+
+/* ---- Bold model name, top of hero ---- */
+.model-name {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-family: var(--mono); font-weight: 700; letter-spacing: .01em;
+  font-size: clamp(2.3rem, 5vw, 3.2rem);
+  color: #FBFAF6; margin: 0 0 14px;
+}
+.model-name .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px rgba(201,151,63,.2); flex-shrink: 0; margin-right: 4px; }
+.model-name .pill {
+  font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .02em;
+  color: #E7DCC4; background: rgba(201,151,63,.14); border: 1px solid rgba(201,151,63,.35);
+  padding: 3px 10px; border-radius: 999px; text-transform: none; margin-left: 6px;
+}
+
+/* ---- In-page document viewer (replaces navigating to a raw file) ---- */
+[data-doc] { cursor: pointer; }
+.doc-modal-backdrop {
+  position: fixed; inset: 0; z-index: 200; display: none;
+  background: rgba(6,8,10,.66); backdrop-filter: blur(3px);
+  align-items: flex-start; justify-content: center; padding: 6vh 20px;
+}
+.doc-modal-backdrop.open { display: flex; }
+.doc-modal {
+  background: var(--surface); width: 100%; max-width: 780px; max-height: 86vh;
+  border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 30px 70px rgba(0,0,0,.45);
+}
+.doc-modal-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 15px 22px; background: var(--navy); border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.doc-modal-head-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.doc-modal-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #9AA5B5; }
+.doc-modal-title { font-family: var(--mono); font-size: 14px; color: #FBFAF6; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-modal-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.doc-modal-raw {
+  font-family: var(--mono); font-size: 11px; color: #C6CCD6; border: 1px solid rgba(255,255,255,.22);
+  border-radius: 6px; padding: 5px 10px; background: transparent;
+}
+.doc-modal-raw:hover { background: rgba(255,255,255,.08); color: #fff; text-decoration: none; }
+.doc-modal-close {
+  background: none; border: none; color: #C6CCD6; font-size: 20px; line-height: 1;
+  cursor: pointer; padding: 4px 9px; border-radius: 6px;
+}
+.doc-modal-close:hover { background: rgba(255,255,255,.1); color: #fff; }
+.doc-modal-body { padding: 26px 32px 36px; overflow-y: auto; font-size: .97rem; }
+.doc-modal-body h1, .doc-modal-body h2, .doc-modal-body h3 { font-family: var(--head); margin: 1.3em 0 .5em; }
+.doc-modal-body h1:first-child, .doc-modal-body h2:first-child, .doc-modal-body h3:first-child { margin-top: 0; }
+.doc-modal-body p { margin: 0 0 1em; color: var(--ink); }
+.doc-modal-body ul { margin: 0 0 1em; padding-left: 22px; }
+.doc-modal-body li { margin-bottom: .4em; }
+.doc-modal-body pre {
+  background: var(--navy); color: #DCE7E5; padding: 16px 18px; border-radius: 10px;
+  overflow-x: auto; font-family: var(--mono); font-size: .84rem; line-height: 1.6; margin: 0 0 1.2em;
+}
+.doc-modal-body pre code { background: none; padding: 0; color: inherit; }
+.doc-modal-body :not(pre) > code { font-family: var(--mono); background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: .88em; }
+.doc-modal-body a { color: var(--gold-ink); }
+.doc-modal-body table { border-collapse: collapse; width: 100%; margin: 0 0 1.2em; font-size: .88rem; }
+.doc-modal-body th, .doc-modal-body td { border: 1px solid var(--border); padding: 7px 11px; text-align: left; }
+.doc-modal-body th { background: var(--surface-2); font-family: var(--mono); font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); }
+.doc-modal-status { font-family: var(--mono); font-size: .86rem; color: var(--ink-faint); }
+@media (max-width: 640px) { .doc-modal-body { padding: 20px 20px 28px; } .doc-modal-backdrop { padding: 0; align-items: stretch; } .doc-modal { max-width: none; max-height: none; height: 100vh; border-radius: 0; } }
+
+/* ---- Catalog: professional grid of model cards ---- */
+ul.records.grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;
+  list-style: none; margin: 0; padding: 0;
+}
+ul.records.grid > li { display: flex; }
+ul.records.grid .record {
+  display: flex; flex-direction: column; width: 100%;
+  border-top: 3px solid var(--gold);
+  position: relative;
+}
+.record-icon {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-soft) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-weight: 700; font-size: 16px; color: var(--gold);
+}
+.record-titles { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.record-name { font-size: 1.28rem; font-family: var(--head); font-weight: 700; margin: 0; color: var(--ink); }
+.record-id { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); margin: 1px 0 0; }
+.record-desc { flex-grow: 1; }
+.record-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
 </style>
 </head>
 <body>
+<nav class="topnav">
+<div class="wrap navwrap">
+<a class="brand" href="https://magenais.github.io/MAGENAIS-Public/"><img class="brand-logo" src="./assets/magenais-logo.png" alt="MAGENAIS" aria-hidden="true"><span class="brand-text"><span class="mark">MAGENAI<span class="accent">S</span></span><span class="tag">Models &middot; AnomalyMind</span></span></a>
+<div class="navlinks">
+<a href="https://magenais.github.io/MAGENAIS-MODELS/" class="is-active">Models Hub</a><a href="./docs/algorithm.md" data-doc data-doc-title="Algorithm">Docs</a><a href="https://github.com/MAGENAIS/MAGENAIS-MODEL-ANOMALY-MIND">GitHub</a>
+</div>
+</div>
+</nav>
 <header class="hero">
 <div class="wrap">
-<p class="kicker"><a href="https://github.com/MAGENAIS">MAGENAIS</a> / <a href="https://magenais.github.io/MAGENAIS-MODELS/">Models</a> / AnomalyMind</p>
-<p class="id-line">magenais.anomaly-mind · v1.0.0</p>
-<h1>Lightweight, explainable anomaly detection.</h1>
+<p class="breadcrumb"><a href="https://magenais.github.io/MAGENAIS-Public/">MAGENAIS</a><span>/</span><a href="https://magenais.github.io/MAGENAIS-MODELS/">Models</a><span>/</span>AnomalyMind</p>
+<div class="model-name"><span class="dot"></span>AnomalyMind<span class="pill">magenais.anomaly-mind &middot; v1.0.0 &middot; published</span></div>
+<h1>Lightweight, explainable <span class="accent">anomaly detection.</span></h1>
 <p class="lede">Flags outliers in tabular or time-series data using simple, well-understood statistics — no neural network — then reports an Anomaly Context Stability score for whether each flag holds up under different thresholds, windows, methods, and row subsets, or only under one specific setting.</p>
+<div class="hero-actions">
+<a class="btn btn-primary" href="https://github.com/MAGENAIS/MAGENAIS-MODEL-ANOMALY-MIND">View on GitHub</a>
+<a class="btn btn-ghost" href="./docs/algorithm.md" data-doc data-doc-title="Algorithm">Read the algorithm</a>
+</div>
 <dl class="badges">
 <div><dt>License</dt><dd>Apache-2.0</dd></div>
 <div><dt>Type</dt><dd>algorithm</dd></div>
@@ -106,53 +351,187 @@ body { font-size: 16px; }
 </header>
 <main>
 <div class="wrap">
+
 <section id="about">
+<div class="card">
+<p class="section-eyebrow">Overview</p>
 <h2>What it does</h2>
-<p class="body-text">Given a table of records, AnomalyMind infers which columns are numeric, scores every present value using one of four methods — median absolute deviation (MAD), robust (modified) Z-score, interquartile range (IQR), or rolling local-neighborhood statistics — and flags a value anomalous when its deviation exceeds the method's threshold.</p>
-<p class="body-text">For every flag, it computes an Anomaly Context Stability (ACS) score: the proportion of tested configurations — varying threshold, window, method, and a resampled row subset — under which the same observation stays flagged. It is a research-oriented model: MAD/Z-score/IQR/rolling are well-established statistics; ACS is this model's own framing of configuration-resampling stability on top of them, not a claim of a new detection algorithm. See <a href="./docs/algorithm.md">docs/algorithm.md</a> for the full method.</p>
+<p class="body-text">Given a table of records, AnomalyMind infers which columns are numeric, scores every present value using one of four methods — median absolute deviation (MAD), robust (modified) Z-score, interquartile range (IQR), or rolling local-neighborhood statistics — and flags a value anomalous when its deviation exceeds the method's threshold.</p><p class="body-text">For every flag, it computes an Anomaly Context Stability (ACS) score: the proportion of tested configurations — varying threshold, window, method, and a resampled row subset — under which the same observation stays flagged. It is a research-oriented model: MAD/Z-score/IQR/rolling are well-established statistics; ACS is this model's own framing of configuration-resampling stability on top of them, not a claim of a new detection algorithm. See <a href="./docs/algorithm.md" data-doc data-doc-title="Algorithm">docs/algorithm.md</a> for the full method.</p>
+</div>
 </section>
+
 <section id="example">
+<div class="card">
+<p class="section-eyebrow">Example</p>
 <h2>Worked example</h2>
-<p class="section-note">Output of <a href="./examples/basic-usage.mjs">examples/basic-usage.mjs</a> — 30 sensor readings oscillating gently around 100, with two injected extreme anomalies, run with a fixed seed — reproducible byte-for-byte.</p>
+<p class="section-note">Output of <a href="./examples/basic-usage.mjs" data-doc data-doc-title="examples/basic-usage.mjs">examples/basic-usage.mjs</a> — 30 sensor readings oscillating gently around 100, with two injected extreme anomalies, run with a fixed seed — reproducible byte-for-byte.</p>
 <table class="ranking">
 <thead><tr><th>Row</th><th>Variable</th><th>Value</th><th>Method</th><th>Score</th><th>ACS</th><th>Stability</th></tr></thead>
 <tbody>
-<tr><td>20</td><td>sensor</td><td class="num">-50</td><td>mad</td><td class="num">-132.00</td><td class="num">1.00</td><td>stable</td></tr>
-<tr><td>10</td><td>sensor</td><td class="num">250</td><td>mad</td><td class="num">130.71</td><td class="num">1.00</td><td>stable</td></tr>
+<tr><td>20</td><td>sensor</td><td class="num">-50</td><td>mad</td><td class="num">-132.00</td><td class="num">1.00</td><td>stable</td></tr><tr><td>10</td><td>sensor</td><td class="num">250</td><td>mad</td><td class="num">130.71</td><td class="num">1.00</td><td>stable</td></tr>
 </tbody>
 </table>
-<pre class="example"><span class="muted">Both injected values deviate by well over 100 median-absolute-deviations</span>
+<div class="terminal">
+<div class="terminal-bar"><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span></div>
+<pre><span class="muted">Both injected values deviate by well over 100 median-absolute-deviations</span>
 <span class="muted">from the rest of the series, and stayed flagged in every evaluable</span>
 <span class="muted">configuration tested (threshold, window, method, and row subset):</span>
 
 <span class="accent">Anomaly Context Stability (ACS): 1.00 — stable</span></pre>
+</div>
 <p class="disclaimer">ACS is a sensitivity estimate under tested assumptions, not a guarantee.</p>
+</div>
 </section>
+
 <section id="limitations">
+<div class="card">
+<p class="section-eyebrow">Know before you use it</p>
 <h2>Limitations</h2>
 <ul class="plain">
-<li>Only univariate anomalies are modeled — no multivariate outlier detection (e.g. Mahalanobis distance) in v1.0.0.</li>
-<li>The rolling method's fixed-size window has fewer neighbors near the start/end of a series, which can make edge observations more sensitive to being flagged under that method alone.</li>
-<li>ACS's "normalization" variation cycles through this model's own four methods, not arbitrary data transforms.</li>
+<li>Only univariate anomalies are modeled — no multivariate outlier detection (e.g. Mahalanobis distance) in v1.0.0.</li><li>The rolling method's fixed-size window has fewer neighbors near the start/end of a series, which can make edge observations more sensitive to being flagged under that method alone.</li><li>ACS's "normalization" variation cycles through this model's own four methods, not arbitrary data transforms.</li>
 </ul>
+</div>
 </section>
+
 <section id="resources">
+<p class="section-eyebrow">Next steps</p>
 <h2>Get started</h2>
 <ul class="resources">
-<li><a href="./README.md">README</a><span>Install, API, full example</span></li>
-<li><a href="./docs/algorithm.md">Algorithm</a><span>MAD, robust Z-score, IQR, rolling, and ACS explained in full</span></li>
-<li><a href="./tests/anomalyMind.test.ts">Tests</a><span>39 tests, node:test</span></li>
-<li><a href="./CHANGELOG.md">Changelog</a><span>Version history</span></li>
-<li><a href="https://github.com/MAGENAIS/MAGENAIS-MODEL-ANOMALY-MIND">Source on GitHub</a><span>Clone, fork, or open an issue</span></li>
-<li><a href="https://magenais.github.io/MAGENAIS-MODELS/">MAGENAIS Models catalog</a><span>Browse all models</span></li>
+<li><a href="./README.md" data-doc data-doc-title="README.md">README</a><span>Install, API, full example</span></li><li><a href="./docs/algorithm.md" data-doc data-doc-title="Algorithm">Algorithm</a><span>MAD, robust Z-score, IQR, rolling, and ACS explained in full</span></li><li><a href="./tests/anomalyMind.test.ts" data-doc data-doc-title="tests/anomalyMind.test.ts">Tests</a><span>39 tests, node:test</span></li><li><a href="./CHANGELOG.md" data-doc data-doc-title="CHANGELOG.md">Changelog</a><span>Version history</span></li><li><a href="https://github.com/MAGENAIS/MAGENAIS-MODEL-ANOMALY-MIND">Source on GitHub</a><span>Clone, fork, or open an issue</span></li><li><a href="https://magenais.github.io/MAGENAIS-MODELS/">MAGENAIS Models catalog</a><span>Browse all models</span></li>
 </ul>
 </section>
+
 </div>
 </main>
 <footer>
-<div class="wrap">
+<div class="wrap footer-top">
+<div>
+<p class="footer-brand-mark"><a href="https://magenais.github.io/MAGENAIS-Public/"><span class="brand-mark">M</span>AGENAIS Models</a></p>
+<p class="footer-blurb">A catalog of independent, open-source, research-oriented models. Runs locally — no API key, no account, no cloud service required.</p>
+</div>
+<div class="footer-col">
+<h3>ANOMALYMIND</h3>
+<a href="./README.md" data-doc data-doc-title="README.md">README</a>
+<a href="./docs/algorithm.md" data-doc data-doc-title="Algorithm">Algorithm</a>
+<a href="./CHANGELOG.md" data-doc data-doc-title="CHANGELOG.md">Changelog</a>
+<a href="./tests/anomalyMind.test.ts" data-doc data-doc-title="tests/anomalyMind.test.ts">Tests</a>
+</div>
+<div class="footer-col">
+<h3>MAGENAIS</h3>
+<a href="https://magenais.github.io/MAGENAIS-Public/">MAGENAIS App</a>
+<a href="https://magenais.github.io/MAGENAIS-MODELS/">Models catalog</a>
+<a href="https://github.com/MAGENAIS">GitHub organization</a>
+<a href="https://github.com/MAGENAIS/MAGENAIS-MODELS/blob/main/CONTRIBUTING.md">Contributing</a>
+</div>
+</div>
+<div class="wrap footer-bottom">
 <p>Apache-2.0 licensed. Independent of MAGENAIS Core, which is separate and proprietary — this package runs without it and depends on nothing from it.</p>
 </div>
 </footer>
+
+<script id="__doc_data__" type="application/json">{"./README.md": "# AnomalyMind\n\nLightweight, local, explainable anomaly detection over numeric\ntabular/time-series/sensor data. Part of the\n[MAGENAIS Model Hub](https://github.com/MAGENAIS/MAGENAIS-MODELS), but\nfully independent — you can use this package without installing or\nrunning MAGENAIS at all.\n\n> **Research-oriented.** AnomalyMind is a MAGENAIS research model. Its\n> metric (ACS) is an original name for a well-understood idea — testing a\n> flagged observation's stability by resampling the detection\n> configuration — applied to lightweight anomaly detection; no novelty\n> claim is made beyond that framing. See\n> [Research direction](#research-direction).\n\n## What it does\n\nGiven a set of **records** (rows of a table — from CSV, JSON, sensor logs,\nor any tabular source), AnomalyMind:\n\n1. Infers which columns are numeric (non-numeric columns are reported back\n   as `variablesSkipped`, never silently dropped).\n2. Scores every present numeric value in every considered variable using\n   **one** of four simple, explainable methods — no neural network:\n   - **MAD** — median absolute deviation rule of thumb.\n   - **Robust (modified) Z-score** — the standard Iglewicz & Hoaglin\n     MAD-scaled z-score.\n   - **IQR** — the classic Tukey-fence interquartile-range rule.\n   - **Rolling** — a local-neighborhood z-score, for time-series/sensor\n     data where \"normal\" drifts over the series.\n3. Flags a value anomalous when its deviation score exceeds the method's\n   threshold.\n4. Computes an **Anomaly Context Stability (ACS)** score for every flagged\n   observation: the proportion of tested configurations — varying\n   threshold, window, method (normalization), and row subset — under\n   which the same observation stays flagged. Classifies each anomaly as\n   `stable` (holds up broadly) or `threshold-sensitive` (only flagged\n   under the exact baseline settings).\n\n**AnomalyMind never presents a flag as certain** — every anomaly's\nexplanation states its ACS is a sensitivity estimate under tested\nassumptions, not a guarantee.\n\n## Input\n\n```ts\ninterface AnomalyMindInput {\n  records: Record<string, number | string | boolean | null | undefined>[];\n  variables?: string[]; // restrict analysis to these columns; default = every numeric column present\n}\n\ninterface AnomalyMindRunOptions {\n  method?: 'mad' | 'robust-zscore' | 'iqr' | 'rolling'; // default 'mad'\n  threshold?: number;   // default depends on method\n  window?: number;      // 'rolling' method only; default 10 (or fewer, for small datasets)\n  acsTrials?: number;   // default 30\n  seed?: number;        // default 42 — same input + seed always reproduces the same ACS\n}\n```\n\n## Output\n\n```ts\ninterface AnomalyMindOutput {\n  anomalies: {\n    index: number;         // row index within the original records array\n    variable: string;\n    value: number;\n    method: 'mad' | 'robust-zscore' | 'iqr' | 'rolling';\n    score: number;         // method-specific deviation score; not comparable across methods\n    threshold: number;\n    isAnomaly: true;\n    acs: number;           // 0–1, Anomaly Context Stability\n    stability: 'stable' | 'threshold-sensitive' | 'untested';\n    explanation: string;\n  }[];\n  variablesConsidered: string[];\n  variablesSkipped: string[]; // present but not numeric\n  rowCount: number;\n  method: 'mad' | 'robust-zscore' | 'iqr' | 'rolling';\n}\n```\n\n## Algorithm\n\n- **MAD:** flag if `|x − median| / MAD > threshold` (default threshold `3`).\n- **Robust (modified) Z-score:** flag if `|0.6745 × (x − median) / MAD| > threshold`\n  (default `3.5`, the standard Iglewicz & Hoaglin cutoff).\n- **IQR:** flag if `x` falls more than `threshold × IQR` beyond the nearer\n  quartile (default `1.5`, the classic Tukey fence).\n- **Rolling:** flag if `x`'s z-score against its own local neighborhood\n  (excluding itself) exceeds `threshold` (default `3`, default `window` `10`).\n\nSee `docs/algorithm.md` for the full method, including how ACS's\nconfiguration sampling works and how small datasets and missing values are\nhandled.\n\n## Example\n\n```ts\nimport { AnomalyMindModel } from '@magenais/anomaly-mind';\n\nconst model = new AnomalyMindModel();\n\nconst response = await model.execute({\n  input: {\n    records: [\n      { t: 0, sensor: 100 }, { t: 1, sensor: 101 }, { t: 2, sensor: 99 },\n      { t: 3, sensor: 250 }, // injected spike\n      // ...\n    ],\n  },\n  options: { seed: 42 },\n});\n\nfor (const a of response.output.anomalies) {\n  console.log(a.variable, a.index, a.value, a.stability, a.acs.toFixed(2));\n}\n```\n\nSee `examples/basic-usage.mjs` for a runnable version of this.\n\n## Limitations\n\n- Only univariate anomalies are modeled — no multivariate outlier\n  detection (e.g. Mahalanobis distance) in v1.0.0.\n- The `'rolling'` method's neighborhood near the start/end of a series has\n  fewer points than a full window, which can make edge observations more\n  sensitive to detection under this method than points in the middle of a\n  series — a known accuracy limitation of a symmetric fixed-size window,\n  not a bug.\n- ACS's \"normalization\" variation cycles through the four built-in methods\n  rather than testing arbitrary alternative normalizations (e.g.\n  log-transform first) — it is not a substitute for choosing an\n  appropriate transform for your data's distribution.\n- ACS is a resampling-based heuristic, not a formal statistical\n  significance test, and its cost scales with the number of flagged\n  anomalies (see `SECURITY.md`).\n\n## Research direction\n\nACS is designed to be subjected to literature review, benchmarking against\nestablished outlier-detection stability/robustness measures, ablation\nstudies, and statistical validation. Contributions in that direction are\nwelcome — see `CONTRIBUTING.md`.\n\n## Version\n\n`1.0.0` — versioned independently of MAGENAIS itself.\n\n## License\n\nApache-2.0. See `LICENSE`.\n", "./docs/algorithm.md": "# Algorithm\n\n## 0. Variable typing\n\nEvery column (record key) considered is classified as **numeric** or\n**skipped**: numeric if every present (non-null, non-empty-string) value\nacross all rows is a number or a string that parses cleanly as one;\nskipped otherwise (including a column with no present values at all).\nAnomalyMind only analyzes numeric columns — non-numeric columns are\nreported back in `variablesSkipped`, never silently dropped without\nexplanation.\n\n## 1. MAD (median absolute deviation)\n\nFor a numeric variable, using only present values:\n\n1. Compute the **median** and the **median absolute deviation** (`MAD` —\n   the median of `|x − median|` across all present values).\n2. `score = |x − median| / max(MAD, ε)` for each value (a tiny floor `ε`\n   is used in place of an exact zero `MAD`, so a perfectly constant series\n   still yields a finite, not `Infinity`/`NaN`, score for any genuinely\n   different value).\n3. Flag anomalous if `score > threshold` (default `3`).\n\n## 2. Robust (modified) Z-score\n\nSame underlying statistic as MAD (median + MAD), scaled by the standard\nIglewicz & Hoaglin constant:\n\n1. `score = 0.6745 × (x − median) / max(MAD, ε)`.\n2. Flag anomalous if `|score| > threshold` (default `3.5`, the\n   conventional cutoff for this specific scaled metric).\n\nKept as a separate method from plain MAD (rather than folded into it) so\nthat Anomaly Context Stability's \"normalization\" variation (§4) has a real\nsecond scaling to test, not just a relabeling of the same numbers.\n\n## 3. IQR (interquartile range)\n\nFor a numeric variable, using only present values:\n\n1. Compute quartiles via Tukey's hinges: the median of the lower half and\n   the median of the upper half of the sorted values (excluding the\n   overall median itself when the array has odd length). `IQR = Q3 − Q1`.\n2. For each value: `beyond = max(Q1 − x, x − Q3, 0)`;\n   `score = beyond / max(IQR, ε)`.\n3. Flag anomalous if `score > threshold` (default `1.5`, the classic Tukey\n   fence multiplier).\n\n## 4. Rolling (local neighborhood)\n\nFor a numeric variable, using only present values, treated as an ordered\nseries:\n\n1. For each value at position `i`, take its **neighborhood**: every other\n   present value within `⌊window / 2⌋` positions of `i` (excluding the\n   point itself, so an anomaly cannot inflate its own baseline).\n2. Compute the neighborhood's mean and standard deviation.\n3. `score = (x_i − neighborhoodMean) / max(neighborhoodStd, ε)`.\n4. Flag anomalous if `|score| > threshold` (default `3`, default\n   `window` `10`, or fewer for a small dataset).\n5. If fewer than 2 neighbors are available (extremely small dataset),\n   `score = 0` — never treated as anomalous by default in that case (not\n   enough local context to judge).\n\nThis is the only one of the four methods that is inherently local — the\nother three compute one global statistic (median/MAD or quartiles) across\nthe whole variable.\n\n## 5. Anomaly Context Stability (ACS)\n\n**Question it answers:** \"Does this flagged observation stay anomalous\nunder reasonable variations in how anomaly detection is configured, or is\nit only anomalous under one specific, possibly arbitrary, setting?\"\n\n**Method**, for one flagged observation (a specific row index and\nvariable):\n\n1. Run `acsTrials` (default `30`) independent trials. Each trial, using a\n   seeded PRNG ([mulberry32](https://github.com/bryc/code/blob/master/jshash/PRNGs.md),\n   default seed `42`, so the same input + seed always reproduces the same\n   ACS):\n   - picks one of the four methods at random (the **normalization**\n     variation),\n   - jitters the baseline threshold by up to ±30% (the **threshold**\n     variation),\n   - jitters the baseline window by up to ±30%, for methods that use one\n     (the **window** variation),\n   - samples a random ~80%-of-rows subset that always force-includes the\n     observation being tested (the **subset** variation), preserving row\n     order within the subset (relevant to the rolling method).\n2. Re-runs detection with that trial's method/threshold/window over that\n   trial's subset, and checks whether the target observation is still\n   flagged anomalous within the subset.\n3. `ACS = (trials where the observation was still flagged) / (trials where\n   the observation was evaluable at all)`. A trial where the observation's\n   value wasn't evaluable in that subset is excluded from both the\n   numerator and denominator — it carries no evidence either way, rather\n   than being counted as \"not anomalous.\"\n4. If fewer than 5 trials were evaluable (an extremely small dataset),\n   `ACS` defaults to `1` and is flagged `untested` — this should be read\n   as \"not enough data to test,\" not as a confirmed stable anomaly.\n5. `stability` is `'stable'` if `ACS >= 0.7`, else `'threshold-sensitive'`\n   (or `'untested'` per step 4).\n\n**Interpretation:** `ACS = 1.0` means the observation stayed anomalous in\nevery evaluable trial — evidence it's a genuine outlier, not an artifact\nof one specific threshold/window/method choice. `ACS = 0.5` means it was\nflagged in only half the tested configurations: a caution sign that the\nflag is sensitive to exactly how detection was configured, not a\ngenerally agreed-upon anomaly.\n\n## What this is not\n\n- Not a multivariate method. Each variable is scored independently; no\n  Mahalanobis distance, isolation forest, or other multivariate outlier\n  technique is used in v1.0.0.\n- Not a formal statistical test. `score` and `ACS` are deterministic,\n  interpretable heuristics — neither is a p-value, and neither carries a\n  formal significance guarantee.\n- Not exhaustive. ACS's \"normalization\" variation only cycles through\n  this package's own four methods — it does not test arbitrary data\n  transforms (log, Box-Cox, etc.).\n\n## Research direction\n\nCandidate directions for follow-up validation (see `CONTRIBUTING.md`):\n\n- Compare ACS's configuration-resampling approach against established\n  outlier-detection robustness/stability measures.\n- Extend beyond univariate detection (e.g. Mahalanobis distance, isolation\n  forest) once a clear, explainable design is worked out — while keeping\n  the existing lightweight methods as a fast, dependency-free default.\n- Empirical calibration: for datasets with known ground-truth anomalies\n  (simulated or benchmark), how well does ACS's `stable` classification\n  track true positives vs. `threshold-sensitive` tracking false positives?\n", "./CHANGELOG.md": "# Changelog\n\nAll notable changes to this project will be documented in this file.\nFormat loosely follows [Keep a Changelog](https://keepachangelog.com/), and\nthis project uses [Semantic Versioning](https://semver.org/), independent\nof MAGENAIS's own version.\n\n## [Unreleased]\n\nNothing yet.\n\n## [1.0.0] — not yet released\n\nPrepared during MAGENAIS V4.1 Phase 10. Not yet published — see\n`../ANOMALYMIND-REPO-READY.md` in the MAGENAIS repository for the publish\nchecklist and remaining GitHub-repository checkpoint (Phase 11).\n\n### Added\n\n- `AnomalyMindModel` implementing the shared `Model` contract\n  (`execute()` → normalized `ModelResponse`).\n- Four lightweight, explainable detection methods\n  (`AnomalyMindAlgorithm.ts`): median absolute deviation (MAD), robust\n  (modified) Z-score, interquartile range (IQR), and rolling\n  local-neighborhood statistics. No neural network.\n- Numeric-variable inference: non-numeric columns are reported back as\n  `variablesSkipped`, never silently dropped without explanation.\n- Anomaly Context Stability (ACS): seeded, reproducible testing of each\n  flagged observation across tested variations in threshold, window,\n  normalization method, and row subset (`AnomalyContextStability.ts`).\n  Classifies each anomaly as `'stable'` or `'threshold-sensitive'`, always\n  paired with a \"sensitivity estimate, not a guarantee\" disclaimer.\n- Unit tests covering: normal data, known injected anomalies, a MAD test,\n  a robust-Z-score test, an IQR test, a rolling test, a stability test\n  (both a stable and a genuine threshold-sensitive case), missing values,\n  empty/invalid input, single-row data, small datasets, and a larger\n  (300-row, 3-variable) synthetic dataset. Deterministic output is\n  verified directly.\n- Runnable example (`examples/basic-usage.mjs`).\n- `model.json` manifest, Apache-2.0 `LICENSE`, `SECURITY.md`,\n  `CONTRIBUTING.md`.\n", "./examples/basic-usage.mjs": "// Runnable example — no MAGENAIS installation required.\n//\n// Usage:\n//   node --experimental-strip-types examples/basic-usage.mjs\n// (or: npm run example)\n\nimport { AnomalyMindModel } from '../src/index.ts';\n\nconst model = new AnomalyMindModel();\n\n// A small, made-up sensor-reading dataset that oscillates gently around\n// 100, with two deliberately injected extreme anomalies.\nconst records = Array.from({ length: 30 }, (_, i) => ({\n  t: i,\n  sensor: 100 + Math.sin(i / 3) * 2,\n}));\nrecords[10].sensor = 250; // injected spike\nrecords[20].sensor = -50; // injected drop\n\nconst response = await model.execute({\n  input: { records },\n  options: { seed: 42 },\n});\n\nconsole.log(\n  `Evaluated ${response.output.variablesConsidered.length} numeric variable(s) across ${response.output.rowCount} rows ` +\n    `using the ${response.output.method} method.\\n`\n);\n\nfor (const a of response.output.anomalies) {\n  console.log(`row ${a.index} — ${a.variable} = ${a.value}`);\n  console.log(`  score: ${a.score.toFixed(2)}  threshold: ${a.threshold}`);\n  console.log(`  Anomaly Context Stability (ACS): ${a.acs.toFixed(2)} (${a.stability})`);\n  console.log(`  ${a.explanation}\\n`);\n}\n\nconsole.log(response.explanation);\n", "./tests/anomalyMind.test.ts": "/**\n * Independent-package copy of MAGENAIS's tests/unit/anomalyMind.test.ts,\n * kept in sync manually per MASTER PROMPT §28 (same relationship\n * DecisionScore's and PatternSense's two test copies have — see\n * MAGENAIS-MODEL-DECISION-SCORE's CONTRIBUTING.md). Covers MASTER PROMPT\n * §37's exact list for AnomalyMind (normal data, known injected anomalies,\n * MAD test, IQR test, stability test, missing values) plus the universal\n * cases every model must cover (empty input, invalid input, missing\n * values, single-row data, small datasets, a larger synthetic dataset,\n * deterministic output). 39 tests — same coverage as MAGENAIS's copy.\n */\nimport { test, describe } from 'node:test';\nimport assert from 'node:assert/strict';\nimport {\n  validateInput,\n  validateRunOptions,\n  AnomalyMindValidationError,\n  resolveVariableNames,\n  inferNumericVariables,\n  median,\n  computeMAD,\n  quartiles,\n  detectAnomaliesForVariable,\n  DEFAULT_THRESHOLDS,\n} from '../src/AnomalyMindAlgorithm.ts';\nimport { computeACS, classifyStability } from '../src/AnomalyContextStability.ts';\nimport { AnomalyMindModel } from '../src/AnomalyMindModel.ts';\nimport type { AnomalyMindInput, AnomalyMindRecord } from '../src/types.ts';\n\n/** 30 rows of \"normal\" data (small deterministic oscillation around 100), with two extreme injected anomalies. */\nfunction normalWithInjectedAnomalies(n = 30): AnomalyMindRecord[] {\n  const records: AnomalyMindRecord[] = Array.from({ length: n }, (_, i) => ({\n    t: i,\n    sensor: 100 + ((i % 5) - 2), // oscillates 98..102, deterministic (no Math.random)\n  }));\n  records[10].sensor = 250; // extreme high outlier\n  records[20].sensor = -50; // extreme low outlier\n  return records;\n}\n\n/** Small deterministic integer spread (-3..3) used to probe MAD/robust-zscore threshold behavior precisely. */\nfunction smallSpreadFixture(n = 40): AnomalyMindRecord[] {\n  return Array.from({ length: n }, (_, i) => ({ v: (i % 7) - 3 }));\n}\n\ndescribe('AnomalyMindAlgorithm — validation', () => {\n  test('rejects empty records array', () => {\n    assert.throws(() => validateInput({ records: [] }), AnomalyMindValidationError);\n  });\n\n  test('rejects completely empty input object', () => {\n    // @ts-expect-error — deliberately malformed for the test\n    assert.throws(() => validateInput({}), AnomalyMindValidationError);\n  });\n\n  test('rejects a non-array records field', () => {\n    // @ts-expect-error — deliberately malformed for the test\n    assert.throws(() => validateInput({ records: 'nope' }), AnomalyMindValidationError);\n  });\n\n  test('rejects a non-object record', () => {\n    const input = { records: [{ v: 1 }, 'bad'] } as unknown as AnomalyMindInput;\n    assert.throws(() => validateInput(input), AnomalyMindValidationError);\n  });\n\n  test('rejects an empty variables array', () => {\n    assert.throws(() => validateInput({ records: [{ v: 1 }], variables: [] }), AnomalyMindValidationError);\n  });\n\n  test('accepts minimal valid input', () => {\n    assert.doesNotThrow(() => validateInput({ records: [{ v: 1 }] }));\n  });\n\n  test('validateRunOptions rejects an unknown method', () => {\n    // @ts-expect-error — deliberately invalid for the test\n    assert.throws(() => validateRunOptions('not-a-method'), AnomalyMindValidationError);\n  });\n\n  test('validateRunOptions accepts every documented method and undefined', () => {\n    assert.doesNotThrow(() => validateRunOptions(undefined));\n    assert.doesNotThrow(() => validateRunOptions('mad'));\n    assert.doesNotThrow(() => validateRunOptions('robust-zscore'));\n    assert.doesNotThrow(() => validateRunOptions('iqr'));\n    assert.doesNotThrow(() => validateRunOptions('rolling'));\n  });\n});\n\ndescribe('AnomalyMindAlgorithm — variable resolution', () => {\n  test('resolveVariableNames defaults to the union of all record keys', () => {\n    const names = resolveVariableNames({ records: [{ a: 1, b: 2 }, { a: 3, c: 4 }] });\n    assert.deepEqual(new Set(names), new Set(['a', 'b', 'c']));\n  });\n\n  test('resolveVariableNames respects a caller-supplied variables list', () => {\n    const names = resolveVariableNames({ records: [{ a: 1, b: 2 }], variables: ['a'] });\n    assert.deepEqual(names, ['a']);\n  });\n\n  test('inferNumericVariables separates numeric from non-numeric columns', () => {\n    const records = [{ n: 1, cat: 'x' }, { n: 2, cat: 'y' }, { n: 3, cat: 'z' }];\n    const { numeric, skipped } = inferNumericVariables(records, ['n', 'cat']);\n    assert.deepEqual(numeric, ['n']);\n    assert.deepEqual(skipped, ['cat']);\n  });\n\n  test('inferNumericVariables treats a variable with zero present values as skipped', () => {\n    const records = [{ n: null }, { n: undefined }];\n    const { numeric, skipped } = inferNumericVariables(records, ['n']);\n    assert.deepEqual(numeric, []);\n    assert.deepEqual(skipped, ['n']);\n  });\n\n  test('inferNumericVariables accepts numeric strings', () => {\n    const records = [{ n: '1' }, { n: '2.5' }, { n: '3' }];\n    const { numeric } = inferNumericVariables(records, ['n']);\n    assert.deepEqual(numeric, ['n']);\n  });\n});\n\ndescribe('AnomalyMindAlgorithm — median / MAD / quartiles', () => {\n  test('median of an odd-length array', () => {\n    assert.equal(median([3, 1, 2]), 2);\n  });\n\n  test('median of an even-length array averages the two middle values', () => {\n    assert.equal(median([1, 2, 3, 4]), 2.5);\n  });\n\n  test('computeMAD is zero for a constant array', () => {\n    assert.equal(computeMAD([5, 5, 5, 5]), 0);\n  });\n\n  test('computeMAD matches a hand-computed example', () => {\n    // values: 1,2,3,4,100 -> median 3 -> deviations 2,1,0,1,97 -> median of deviations = 1\n    assert.equal(computeMAD([1, 2, 3, 4, 100]), 1);\n  });\n\n  test('quartiles produce iqr = q3 - q1 and are order-independent', () => {\n    const a = quartiles([1, 2, 3, 4, 5, 6, 7, 8]);\n    const b = quartiles([8, 6, 2, 4, 7, 1, 5, 3]);\n    assert.equal(a.iqr, b.iqr);\n    assert.ok(a.q3 > a.q1);\n  });\n});\n\ndescribe('AnomalyMindAlgorithm — detectAnomaliesForVariable (known injected anomalies)', () => {\n  test('MAD test: flags both extreme injected anomalies and nothing else, on normal-ish data', () => {\n    const records = normalWithInjectedAnomalies();\n    const results = detectAnomaliesForVariable(records, 'sensor', 'mad', DEFAULT_THRESHOLDS.mad, 10);\n    const flaggedIndices = results.filter((r) => r.isAnomaly).map((r) => r.index).sort((a, b) => a - b);\n    assert.deepEqual(flaggedIndices, [10, 20]);\n  });\n\n  test('robust-zscore test: flags both extreme injected anomalies and nothing else', () => {\n    const records = normalWithInjectedAnomalies();\n    const results = detectAnomaliesForVariable(records, 'sensor', 'robust-zscore', DEFAULT_THRESHOLDS['robust-zscore'], 10);\n    const flaggedIndices = results.filter((r) => r.isAnomaly).map((r) => r.index).sort((a, b) => a - b);\n    assert.deepEqual(flaggedIndices, [10, 20]);\n  });\n\n  test('IQR test: flags both extreme injected anomalies and nothing else', () => {\n    const records = normalWithInjectedAnomalies();\n    const results = detectAnomaliesForVariable(records, 'sensor', 'iqr', DEFAULT_THRESHOLDS.iqr, 10);\n    const flaggedIndices = results.filter((r) => r.isAnomaly).map((r) => r.index).sort((a, b) => a - b);\n    assert.deepEqual(flaggedIndices, [10, 20]);\n  });\n\n  test('rolling test: flags the injected spike using only its local neighborhood', () => {\n    const series = Array.from({ length: 25 }, (_, i) => ({ x: Math.sin(i / 2) * 5 + 50 }));\n    series[12].x = 90;\n    const results = detectAnomaliesForVariable(series, 'x', 'rolling', DEFAULT_THRESHOLDS.rolling, 6);\n    const flagged = results.find((r) => r.index === 12);\n    assert.ok(flagged);\n    assert.equal(flagged?.isAnomaly, true);\n  });\n\n  test('a flat (zero-variance) series flags nothing and never divides by exact zero (no Infinity/NaN scores)', () => {\n    const records = Array.from({ length: 10 }, () => ({ v: 42 }));\n    for (const method of ['mad', 'robust-zscore', 'iqr'] as const) {\n      const results = detectAnomaliesForVariable(records, 'v', method, DEFAULT_THRESHOLDS[method], 10);\n      for (const r of results) {\n        assert.ok(Number.isFinite(r.score));\n        assert.equal(r.isAnomaly, false);\n      }\n    }\n  });\n\n  test('missing values are excluded entirely — never scored, never flagged', () => {\n    const records = [{ v: 1 }, { v: null }, { v: 2 }, { v: undefined }, { v: 3 }, { v: 100 }, { v: 2 }, { v: 3 }];\n    const results = detectAnomaliesForVariable(records, 'v', 'mad', DEFAULT_THRESHOLDS.mad, 10);\n    // Only the 6 present values are scored; missing rows (1, 3) never appear.\n    assert.equal(results.length, 6);\n    assert.ok(!results.some((r) => r.index === 1 || r.index === 3));\n    assert.deepEqual(results.filter((r) => r.isAnomaly).map((r) => r.index), [5]);\n  });\n});\n\ndescribe('AnomalyContextStability (ACS) — stability test', () => {\n  test('an extreme, unambiguous anomaly has high ACS and is classified stable', () => {\n    const records = normalWithInjectedAnomalies();\n    const result = computeACS(records, 'sensor', 10, { threshold: DEFAULT_THRESHOLDS.mad, window: 10 }, { seed: 42 });\n    assert.equal(result.untested, false);\n    assert.ok(result.acs >= 0.7);\n    assert.equal(classifyStability(result), 'stable');\n  });\n\n  test('a borderline anomaly (score just past the threshold) is classified threshold-sensitive', () => {\n    const records = smallSpreadFixture();\n    records[20].v = 7; // score ≈ 3.5 under 'mad' — just past DEFAULT_THRESHOLDS.mad (3)\n    const result = computeACS(records, 'v', 20, { threshold: DEFAULT_THRESHOLDS.mad, window: 10 }, { seed: 42 });\n    assert.equal(result.untested, false);\n    assert.ok(result.acs > 0 && result.acs < 0.7, `expected a mid-range ACS, got ${result.acs}`);\n    assert.equal(classifyStability(result), 'threshold-sensitive');\n  });\n\n  test('ACS is deterministic for a fixed seed', () => {\n    const records = normalWithInjectedAnomalies();\n    const a = computeACS(records, 'sensor', 10, { threshold: DEFAULT_THRESHOLDS.mad, window: 10 }, { seed: 99 });\n    const b = computeACS(records, 'sensor', 10, { threshold: DEFAULT_THRESHOLDS.mad, window: 10 }, { seed: 99 });\n    assert.deepEqual(a, b);\n  });\n\n  test('ACS on a dataset too small to subset meaningfully is reported as untested', () => {\n    const result = computeACS([{ v: 1 }], 'v', 0, { threshold: 3, window: 3 });\n    assert.equal(result.untested, true);\n    assert.equal(result.acs, 1);\n  });\n});\n\ndescribe('AnomalyMindModel — Model interface', () => {\n  test('execute() returns a normalized, successful ModelResponse for valid input', async () => {\n    const model = new AnomalyMindModel();\n    const response = await model.execute({ input: { records: normalWithInjectedAnomalies() }, options: { seed: 42 } });\n    assert.equal(response.success, true);\n    assert.equal(response.modelId, 'magenais.anomaly-mind');\n    assert.equal(response.modelVersion, '1.0.0');\n    assert.ok(typeof response.confidence === 'number');\n    assert.ok(Array.isArray(response.warnings));\n    assert.ok(response.explanation?.length && response.explanation.length > 0);\n  });\n\n  test('execute() flags exactly the two known injected anomalies (known injected anomalies test)', async () => {\n    const model = new AnomalyMindModel();\n    const response = await model.execute({ input: { records: normalWithInjectedAnomalies() }, options: { seed: 42 } });\n    const flaggedIndices = response.output.anomalies.map((a) => a.index).sort((a, b) => a - b);\n    assert.deepEqual(flaggedIndices, [10, 20]);\n    for (const a of response.output.anomalies) {\n      assert.equal(a.stability, 'stable');\n    }\n  });\n\n  test('execute() throws AnomalyMindValidationError (not a rejected success:false) on invalid input', async () => {\n    const model = new AnomalyMindModel();\n    await assert.rejects(\n      () => model.execute({ input: { records: [] } }),\n      AnomalyMindValidationError\n    );\n  });\n\n  test('execute() rejects empty input the same way as a direct validateInput() call', async () => {\n    const model = new AnomalyMindModel();\n    await assert.rejects(() => model.execute({ input: {} as AnomalyMindInput }), AnomalyMindValidationError);\n  });\n\n  test('execute() is deterministic for a fixed seed', async () => {\n    const model = new AnomalyMindModel();\n    const input = { records: normalWithInjectedAnomalies() };\n    const a = await model.execute({ input, options: { seed: 123 } });\n    const b = await model.execute({ input, options: { seed: 123 } });\n    assert.deepEqual(a.output, b.output);\n  });\n\n  test('execute() on a single-row dataset finds no anomalies and warns about ACS reliability', async () => {\n    const model = new AnomalyMindModel();\n    const response = await model.execute({ input: { records: [{ v: 5 }] } });\n    assert.equal(response.output.anomalies.length, 0);\n    assert.ok(response.warnings?.some((w) => w.includes('Fewer than 5 rows')));\n  });\n\n  test('execute() on a small dataset (2 rows) does not throw and returns a normalized response', async () => {\n    const model = new AnomalyMindModel();\n    const response = await model.execute({ input: { records: [{ v: 1 }, { v: 2 }] } });\n    assert.equal(response.success, true);\n    assert.equal(response.output.rowCount, 2);\n  });\n\n  test('execute() skips non-numeric variables and reports them in variablesSkipped', async () => {\n    const model = new AnomalyMindModel();\n    const records = Array.from({ length: 10 }, (_, i) => ({ category: i % 2 ? 'a' : 'b', reading: i }));\n    const response = await model.execute({ input: { records } });\n    assert.deepEqual(response.output.variablesConsidered, ['reading']);\n    assert.deepEqual(response.output.variablesSkipped, ['category']);\n  });\n\n  test('execute() respects an explicit method/threshold/window run option', async () => {\n    const model = new AnomalyMindModel();\n    const records = Array.from({ length: 25 }, (_, i) => ({ x: Math.sin(i / 2) * 5 + 50 }));\n    records[12].x = 90;\n    const response = await model.execute({ input: { records }, options: { method: 'rolling', window: 6, threshold: 3 } });\n    assert.equal(response.output.method, 'rolling');\n    assert.ok(response.output.anomalies.some((a) => a.index === 12));\n  });\n\n  test('execute() rejects an unknown method the same way validateRunOptions does', async () => {\n    const model = new AnomalyMindModel();\n    await assert.rejects(\n      () => model.execute({ input: { records: [{ v: 1 }, { v: 2 }] }, options: { method: 'not-a-method' as never } }),\n      AnomalyMindValidationError\n    );\n  });\n\n  test('execute() on a larger synthetic dataset (300 rows, 3 variables) completes and stays internally consistent', async () => {\n    const model = new AnomalyMindModel();\n    const records: AnomalyMindRecord[] = Array.from({ length: 300 }, (_, i) => ({\n      a: 50 + ((i * 13) % 9) - 4,\n      b: Math.sin(i / 10) * 10 + 100,\n      c: i % 4 === 0 ? 'x' : 'y', // non-numeric, should be skipped\n    }));\n    records[150].a = 500;\n    records[200].b = -500;\n    const response = await model.execute({ input: { records }, options: { seed: 42 } });\n    assert.equal(response.output.rowCount, 300);\n    assert.deepEqual(response.output.variablesConsidered.sort(), ['a', 'b']);\n    assert.deepEqual(response.output.variablesSkipped, ['c']);\n    const flaggedIndices = response.output.anomalies.map((a) => a.index);\n    assert.ok(flaggedIndices.includes(150));\n    assert.ok(flaggedIndices.includes(200));\n    for (const a of response.output.anomalies) {\n      assert.ok(a.acs >= 0 && a.acs <= 1);\n    }\n  });\n});\n"}</script>
+<div class="doc-modal-backdrop" id="docModal" role="dialog" aria-modal="true" aria-labelledby="docModalTitle" onclick="if (event.target === this) closeDocModal();">
+<div class="doc-modal">
+<div class="doc-modal-head">
+<div class="doc-modal-head-text">
+<span class="doc-modal-eyebrow">Viewing file</span>
+<span class="doc-modal-title" id="docModalTitle">Document</span>
+</div>
+<div class="doc-modal-actions">
+<a class="doc-modal-raw" id="docModalRaw" href="#" target="_blank" rel="noopener">Open raw</a>
+<button type="button" class="doc-modal-close" onclick="closeDocModal()" aria-label="Close">&times;</button>
+</div>
+</div>
+<div class="doc-modal-body" id="docModalBody"><p class="doc-modal-status">Loading&hellip;</p></div>
+</div>
+</div>
+<script>
+(function () {
+  var __docDataEl = document.getElementById('__doc_data__');
+  window.__DOC_DATA__ = __docDataEl ? JSON.parse(__docDataEl.textContent) : {};
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function mdToHtml(md) {
+    var codeBlocks = [];
+    var html = md.replace(/```[a-zA-Z0-9]*\n([\s\S]*?)```/g, function (m, code) {
+      codeBlocks.push('<pre><code>' + escapeHtml(code.replace(/\n$/, '')) + '</code></pre>');
+      return '\u0000' + (codeBlocks.length - 1) + '\u0000';
+    });
+    html = escapeHtml(html);
+    html = html
+      .replace(/^###### (.*)$/gm, '<h6>$1</h6>')
+      .replace(/^##### (.*)$/gm, '<h5>$1</h5>')
+      .replace(/^#### (.*)$/gm, '<h4>$1</h4>')
+      .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.*)$/gm, '<h1>$1</h1>');
+    html = html
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, '$1<em>$2</em>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    html = html.replace(/(^|\n)[-*] (.*)/g, function (m, pre, text) { return pre + '<li>' + text + '</li>'; });
+    html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, function (m) { return '<ul>' + m + '</ul>'; });
+    html = html.split(/\n{2,}/).map(function (block) {
+      block = block.trim();
+      if (block === '') return '';
+      if (/^<(h\d|ul|pre|table)/.test(block)) return block;
+      return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
+    }).join('\n');
+    html = html.replace(/\u0000(\d+)\u0000/g, function (m, i) { return codeBlocks[parseInt(i, 10)]; });
+    return html;
+  }
+  function renderDoc(body, url, text) {
+    if (/\.(md|markdown)$/i.test(url)) {
+      body.innerHTML = mdToHtml(text);
+    } else {
+      body.innerHTML = '<pre><code>' + escapeHtml(text) + '</code></pre>';
+    }
+  }
+  window.openDocModal = function (url, title) {
+    var backdrop = document.getElementById('docModal');
+    var body = document.getElementById('docModalBody');
+    var titleEl = document.getElementById('docModalTitle');
+    var rawEl = document.getElementById('docModalRaw');
+    titleEl.textContent = title || url;
+    rawEl.href = url;
+    backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    // Every linked file is embedded directly in this page at build time (see the
+    // __DOC_DATA__ JSON block below), so viewing it here never depends on fetch() —
+    // which browsers block for local file:// pages and which would otherwise be the
+    // only way this worked. fetch() below is kept purely as a fallback for any URL
+    // that was not embedded (e.g. an external link opened in the viewer by mistake).
+    var embedded = window.__DOC_DATA__ && Object.prototype.hasOwnProperty.call(window.__DOC_DATA__, url)
+      ? window.__DOC_DATA__[url] : null;
+    if (embedded !== null) {
+      renderDoc(body, url, embedded);
+      return;
+    }
+    body.innerHTML = '<p class="doc-modal-status">Loading&hellip;</p>';
+    fetch(url, { cache: 'no-store' })
+      .then(function (res) { if (!res.ok) throw new Error('fetch failed'); return res.text(); })
+      .then(function (text) { renderDoc(body, url, text); })
+      .catch(function () {
+        body.innerHTML = '<p class="doc-modal-status">This file could not be loaded here &mdash; <a href="' + url + '" target="_blank" rel="noopener">open it directly</a> instead.</p>';
+      });
+  };
+  window.closeDocModal = function () {
+    document.getElementById('docModal').classList.remove('open');
+    document.body.style.overflow = '';
+  };
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeDocModal();
+  });
+  document.querySelectorAll('a[data-doc]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      openDocModal(a.getAttribute('href'), a.getAttribute('data-doc-title') || a.textContent.trim());
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
